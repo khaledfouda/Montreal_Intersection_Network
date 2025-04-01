@@ -17,8 +17,8 @@ montreal <- st_read("../data/geobase_city_of_montreal.json")
 
 # 2. data provided by Aurelie. discard all but relevant variables
 dat <- read.csv("../data/data_final.csv",sep = ';') #%>%
-  dplyr::select(x, y, pi, fi, acc)
-
+  #dplyr::select(x, y, pi, fi, acc)
+# select all variables
 skimr::skim(dat)
 #--------------------------------------
 # Step 2: Make both dataset have matching longitude+latitude (geometry in sf objects)
@@ -161,6 +161,20 @@ sum(is.loop(gsmall))
 deg <- degree(gsmall)
 print("Grand Graph degree distribution:")
 table(deg, useNA = "ifany") 
+#--------------------------------------------------
+# save data to disk:
+#' what we need is: 
+#' edges.final: <nodei,nodej,length_between> pairs
+#' nodes.s: spatial dataframe <node_id, geometry point>
+#' dat.sf: original dataframe with all variable + node_id and geometry point
+#' gsmall: undirected, unweighted graph for edges and nodes
+data_to_keep <- list(edges=edges.final,nodes= nodes.s,df= dat.sf,
+                     graph = gsmall)
+saveRDS(data_to_keep, "../data/processed_data_1033.rds")
+
+
+
+#----------------------------------------------------
 # some visualizations
 plot(gsmall, vertex.size = 5, vertex.label = NA)
 tkplot(gsmall)
@@ -180,4 +194,4 @@ ggplot() +
   geom_sf(data = nodes.s, color = "red", size = .3) +
   theme_minimal() +
   theme_void()
-
+#------------------------------------------------------------------------
