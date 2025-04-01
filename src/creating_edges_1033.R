@@ -12,11 +12,11 @@ library(parallel)
 
 # link to download this data:
 # https://donnees.montreal.ca/en/dataset/geobase
-montreal <- st_read("./data/geobase_city_of_montreal.json")
+montreal <- st_read("../data/geobase_city_of_montreal.json")
 #skimr::skim(montreal)
 
 # 2. data provided by Aurelie. discard all but relevant variables
-dat <- read.csv("./data/data_final.csv",sep = ';') %>%
+dat <- read.csv("../data/data_final.csv",sep = ';') #%>%
   dplyr::select(x, y, pi, fi, acc)
 
 skimr::skim(dat)
