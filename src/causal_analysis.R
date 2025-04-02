@@ -64,3 +64,15 @@ res <- penalized_graph_solver(
 plot((res$Theta[1]*dat.df$tot_crossw), log1p(dat.df$acc))
 plot((res$Theta[2]*dat.df$median), log1p(dat.df$acc))
 plot(res$U, log1p(dat.df$acc))
+
+
+dat.df %>%
+  mutate(acc_log_f = as.factor(round(log1p(acc),2))) %>% 
+  ggplot(aes(x = acc_log_f, y = tot_crossw)) +
+  geom_boxplot()
+
+dat.df %>%
+  mutate(acc_log_f = as.factor(round((acc),2)),
+         tot_crossw = tot_crossw * res$Theta[1]) %>%
+  ggplot(aes(x = acc_log_f, y = tot_crossw)) +
+  geom_boxplot()
