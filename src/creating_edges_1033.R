@@ -29,7 +29,7 @@ montreal %<>% st_transform(crs = 2950) # to match each other dataset
 # testing/checking the dat, geometry is correct and 
 #   we didn't make a mistake above
 mapview(dat.sf)
-mapview(montreal)
+#mapview(montreal)
 #-------------------------------------
 # step 3 works on montreal dataset only.
 # step 3.a: working on Montreal only. Extract all intersections as nodes.
@@ -139,6 +139,10 @@ edges.final %>%
 
 #------------------------------------------------
 # we now build the small network
+nodes.s %<>% arrange(node_id)
+dat.sf %<>% arrange(node_id)
+edges.final %<>% arrange(node_id_start, node_id_end)
+
 gsmall <- graph_from_data_frame(
   d = edges.final,
   directed = FALSE,
@@ -161,18 +165,23 @@ table(deg, useNA = "ifany")
 #' nodes.s: spatial dataframe <node_id, geometry point>
 #' dat.sf: original dataframe with all variable + node_id and geometry point
 #' gsmall: undirected, unweighted graph for edges and nodes
+#' Adj: The adjacency matrix as a sparse object
+#' note, i realized that intersection 4522 has 2 observations. i'll remove one.
+dat.sf %<>%
+  distinct(node_id,.keep_all=T) 
 data_to_keep <- list(edges=edges.final,nodes= nodes.s,df= dat.sf,
-                     graph = gsmall)
+                     graph = gsmall,
+                     Adj = as_adjacency_matrix(gsmall, sparse = TRUE))
 saveRDS(data_to_keep, "../data/processed_data_1033.rds")
 
 
 
 #----------------------------------------------------
 # some visualizations
-plot(gsmall, vertex.size = 5, vertex.label = NA)
-tkplot(gsmall)
-coords <- st_coordinates(nodes.s)
-plot(gsmall, layout = coords, vertex.size = 3, vertex.label = NA)
+#plot(gsmall, vertex.size = 5, vertex.label = NA)
+#tkplot(gsmall)
+#plot(gsmall, layout = st_coordinates(nodes.s),
+#vertex.size = 3, vertex.label = NA)
 #--------------------------------------------------
 # main visualization
 montreal %>%
