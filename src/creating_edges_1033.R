@@ -66,7 +66,7 @@ montreal %<>%
       as.data.frame() %>% rename(node_id_end = node.id),
     by = c("end_pt" = "geom_node")
   ) 
-
+head(montreal)
 # since the data is divided into road segment, the length is computed by the list
 # of geometry points. Note to Xinyi, this could be use as weight. there are other
 # distance functions too than st_length(e.g., st_area, st_perimeter). Check the help page.
@@ -102,8 +102,10 @@ dat.sf$node_id <- st_nearest_feature(dat.sf, nodes.sf)
 edges.s <- montreal %>%
   dplyr::select(node_id_start, node_id_end, segment_length, geometry) %>%
   filter(node_id_start %in% dat.sf$node_id & 
-           node_id_end %in% dat.sf$node_id) %>%
-  distinct(node_id_start, node_id_end, .keep_all=T)
+           node_id_end %in% dat.sf$node_id) #%>% 
+  # distinct(node_id_start, node_id_end, .keep_all=T) 
+head(edges.s)
+dim(edges.s)
 #----- [Temporarily until i fix the code]
 # keep only nodes with known edges (1863 nodes reduced to 1033 nodes)
 edges.s$node_id_end %>% unique() %>% length()
