@@ -197,8 +197,8 @@ data_to_keep <- list(edges=edges.final,
                      graph = gsmall,
                      Adj = as_adjacency_matrix(gsmall, sparse = TRUE))
 saveRDS(data_to_keep, "../data/processed_data_1033.rds")
-
-
+write_csv(as.data.frame(nodes.s), "../data/nodes_1033.csv")
+write_csv(as.data.frame(dat.sf), "../data/data_1033.csv")
 
 #----------------------------------------------------
 # some visualizations
