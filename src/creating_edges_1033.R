@@ -189,13 +189,18 @@ nodes.sf %>%
 #' gsmall: undirected, unweighted graph for edges and nodes
 #' Adj: The adjacency matrix as a sparse object
 #' note, i realized that intersection 4522 has 2 observations. i'll remove one.
+Adj_unweighted =  as_adjacency_matrix(gsmall, sparse = TRUE)
+E(gsmall)$weight <- as.numeric(edges.final$segment_length)
+Adj_weighted =  as_adjacency_matrix(gsmall, attr = "weight", sparse = TRUE)
 dat.sf %<>%
   distinct(node_id,.keep_all=T) 
 data_to_keep <- list(edges=edges.final,
                      nodes= nodes.s,
                      df= dat.sf,
                      graph = gsmall,
-                     Adj = as_adjacency_matrix(gsmall, sparse = TRUE))
+                     adj_unweighted = Adj_unweighted,
+                     adj_weighted = Adj_weighted
+                     )
 saveRDS(data_to_keep, "../data/processed_data_1033.rds")
 write_csv(as.data.frame(nodes.s), "../data/nodes_1033.csv")
 write_csv(as.data.frame(dat.sf), "../data/data_1033.csv")
@@ -224,13 +229,14 @@ ggplot() +
 montreal %>%
   right_join(edges, by=c("node_id_start","node_id_end"),
              multiple="all", relationship="many-to-many") ->
-  edges.to.print
+  edges.to.print2
 
 
 ggplot() +
   geom_sf(data = montreal, color = "grey90", size = 0.3) +
-  geom_sf(data = select(edges.to.print,geometry), color = "blue", size = 1.2) +
+  geom_sf(data = select(edges.to.print2,geometry), color = "green", alpha=0.2, size = 1.2) +
   geom_sf(data = nodes.s, color = "red", size = .3) +
+  geom_sf(data = select(edges.to.print,geometry), color = "blue", size = 1.2) +
   theme_minimal() +
   theme_void()
 
