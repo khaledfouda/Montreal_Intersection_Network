@@ -161,6 +161,26 @@ deg <- degree(gsmall)
 print("Grand Graph degree distribution:")
 table(deg, useNA = "ifany") 
 #--------------------------------------------------
+# we create centrality measures on the large connected graph and then later
+# we take a subset of these measures to our small dataset.
+E(g)$weight <- as.numeric(edges$segment_length)
+nodes.sf$deg_unweighted <- degree(g)
+nodes.sf$deg_weighted <- strength(g)
+nodes.sf$betweenes <- betweenness(g)
+nodes.sf$closeness <- closeness(g)
+nodes.sf$eigcentrality <- eigen_centrality(g)$vector
+nodes.sf$eccentricity <- eccentricity(g)  
+nodes.sf$harmonic <- harmonic_centrality(g)
+
+head(nodes.sf)
+saveRDS(nodes.sf, "../data/all_nodes_with_centrality.rds")
+#---------------------------------------------------------
+# add centrality measures to our subset
+nodes.sf %>%
+  filter(node.id %in% nodes.s$node_id) ->
+  nodes.s
+
+#---------------------------------------------------
 # save data to disk:
 #' what we need is: 
 #' edges.final: <nodei,nodej,length_between> pairs
@@ -171,7 +191,9 @@ table(deg, useNA = "ifany")
 #' note, i realized that intersection 4522 has 2 observations. i'll remove one.
 dat.sf %<>%
   distinct(node_id,.keep_all=T) 
-data_to_keep <- list(edges=edges.final,nodes= nodes.s,df= dat.sf,
+data_to_keep <- list(edges=edges.final,
+                     nodes= nodes.s,
+                     df= dat.sf,
                      graph = gsmall,
                      Adj = as_adjacency_matrix(gsmall, sparse = TRUE))
 saveRDS(data_to_keep, "../data/processed_data_1033.rds")
@@ -199,3 +221,22 @@ ggplot() +
   theme_minimal() +
   theme_void()
 #------------------------------------------------------------------------
+montreal %>%
+  right_join(edges, by=c("node_id_start","node_id_end"),
+             multiple="all", relationship="many-to-many") ->
+  edges.to.print
+
+
+ggplot() +
+  geom_sf(data = montreal, color = "grey90", size = 0.3) +
+  geom_sf(data = select(edges.to.print,geometry), color = "blue", size = 1.2) +
+  geom_sf(data = nodes.s, color = "red", size = .3) +
+  theme_minimal() +
+  theme_void()
+
+components(d$graph)$csize %>% table()
+components(g)$csize
+
+head(nodes.sf)
+
+#-------------------------------------------------
