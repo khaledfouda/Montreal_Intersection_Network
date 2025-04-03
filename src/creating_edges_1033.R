@@ -234,9 +234,4 @@ ggplot() +
   theme_minimal() +
   theme_void()
 
-components(d$graph)$csize %>% table()
-components(g)$csize
-
-head(nodes.sf)
-
 #-------------------------------------------------
