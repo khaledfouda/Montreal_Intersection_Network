@@ -1,29 +1,83 @@
 source("./load_libs.R")
 
 d <- readRDS("../data/processed_data_1033.rds")
-
-# 1. adjacency matrix based on distance:
-
-d$edges %>% head()
-head(d$nodes)
-head(d$df)
-# add the segment length [distance between points] as weight.
-E(d$graph)$weight <- as.numeric(d$edges$segment_length)
-# compute the new adjacency matrix with weight
-d$WAdj <- (as_adjacency_matrix(d$graph, attr = "weight", sparse = T))
-# look  at them
-d$WAdj[1:10,1:10]
-d$Adj[1:10,1:10]
-
-
-
-# 2. centrality measures
-d$nodes$deg_unweighted <- degree(d$graph)
-d$nodes$deg_weighted <- strength(d$graph)
-d$nodes$betweenes <- betweenness(d$graph)
-d$nodes$closeness <- closeness(d$graph)
-d$nodes$eigcentrality <- eigen_centrality(d$graph)$vector
-d$nodes$eccentricity <- eccentricity(d$graph)  
-d$nodes$harmonic <- harmonic_centrality(d$graph)
+montreal <- readRDS("../data/montreal_processed.rds")
 
 # 3. i
+
+
+ggplot() +
+  geom_sf(data = montreal, color = "grey80", size = 0.3) +
+  geom_sf(data = d$nodes, 
+          aes(color = betweenes), 
+          size = 1) +
+  scale_color_viridis_c(option = "magma") +  # or whichever color scale
+  labs(color = "Betweenness",
+       title = "Intersections colored by Betweenness Centrality") +
+  theme_minimal()
+
+
+ggplot() +
+  geom_sf(data = montreal, color = "grey90", size = 0.3) +
+  geom_sf(data = d$nodes, 
+          aes(size  = deg_weighted,  # bigger circles if total road length is large
+              color = closeness),    # color scale for closeness
+          alpha = 0.8) +
+  scale_size(range = c(0.5, 4)) +  # adjust as needed
+  scale_color_viridis_c() +
+  labs(size  = "Weighted Degree",
+       color = "Closeness",
+       title = "Intersections by Weighted Degree (size) & Closeness (color)") +
+  theme_minimal()
+
+
+library(ggrepel)
+
+top5_bet <- d$nodes %>% 
+  top_n(5, wt = betweenes) # pick top 5 by betweenness
+
+ggplot() +
+  geom_sf(data = montreal, color = "grey90", size = 0.3) +
+  geom_sf(data = d$nodes, 
+          aes(color = betweenes), 
+          size = 1) +
+  geom_label_repel(
+    data = top5_bet,
+    aes(label = node.id, geometry=geometry),
+    stat = "sf_coordinates",
+    size = 3
+  ) +
+  scale_color_viridis_c() +
+  labs(color = "Betweenness") +
+  theme_minimal()
+
+
+library(leaflet)
+
+
+montreal_sf <- st_transform(montreal, 4326)
+leaflet(montreal_sf) %>%
+  addTiles() %>%  # adds a background tile layer (OpenStreetMap)
+  addPolylines(
+    # Label for hover:
+    label = ~NOM_VOIE,
+    # Popup for click:
+    popup = ~NOM_VOIE,
+    color = "blue",
+    weight = 2,
+    # Optional highlight style when hovered
+    highlightOptions = highlightOptions(color = "red", weight = 3)
+  )
+
+head(d$df)
+
+montreal %>%
+  filter(start_pt %in% d$df$geometry[1]) %>% dim()
+#---------------------------------------------------------
+d$nodes %>% 
+  as.data.frame() %>%
+  rename(node_id = node.id) %>%
+  left_join(as.data.frame(d$df), "node_id") ->
+  dcomb
+#---------------------------------------------------------
+# Analysis for April 3rd

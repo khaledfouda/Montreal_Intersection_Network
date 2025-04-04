@@ -204,7 +204,7 @@ data_to_keep <- list(edges=edges.final,
 saveRDS(data_to_keep, "../data/processed_data_1033.rds")
 write_csv(as.data.frame(nodes.s), "../data/nodes_1033.csv")
 write_csv(as.data.frame(dat.sf), "../data/data_1033.csv")
-
+saveRDS(montreal, "../data/montreal_processed.rds")
 #----------------------------------------------------
 # some visualizations
 #plot(gsmall, vertex.size = 5, vertex.label = NA)
