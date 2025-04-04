@@ -81,3 +81,33 @@ d$nodes %>%
   dcomb
 #---------------------------------------------------------
 # Analysis for April 3rd
+coords = st_coordinates(d$nodes)
+nodes_xy <- d$nodes %>%
+  mutate(x = coords[,1],
+         y = coords[,2]) %>% as.data.frame()
+
+d$edges %>%
+  left_join(nodes_xy, by=c('node_id_start' ='node.id')) %>%
+  left_join(nodes_xy, by=c('node_id_end' ='node.id'), suffix=c(".from",".to")) ->
+  edges_nodes
+
+
+
+  ggplot() +
+  geom_segment(aes(x.from, y.from, xend=x.to, yend=y.to),
+               color = "grey70", size = 0.3,
+               data = edges_nodes) +
+    geom_point(data = nodes_xy, aes(x=x, y=y), color="black", size=1) +
+    # coord_fixed() +
+    theme_minimal() +
+    labs(title = "Montreal Network of Intersections with sensor data and edges")
+
+#--
+# compute correlation in dcomb
+# closeness is highest for centrally located intersections.
+# betweeness is highly right skewed but a few serve as key bridges between areas
+#Intersections with high degree tend to also have high eigenvector centrality
+#(they connect to other well-connected nodes), and often higher closeness
+# (since being well-connected usually means shorter paths to others).
+# intersections with higher degree or closeness tend to have higher vehicle volumes
+  
