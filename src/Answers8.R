@@ -3,6 +3,11 @@ source("./load_libs.R")
 d <- readRDS("../data/processed_data_1033.rds")
 montreal <- readRDS("../data/montreal_processed.rds")
 
+
+
+sum(!(d$edges$node_id_start %in% d$nodes$node.id))
+
+
 # 3. i
 
 
