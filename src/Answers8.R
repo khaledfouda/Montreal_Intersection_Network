@@ -5,6 +5,8 @@ montreal <- readRDS("../data/montreal_processed.rds")
 
 
 
+
+
 sum(!(d$edges$node_id_start %in% d$nodes$node.id))
 
 
