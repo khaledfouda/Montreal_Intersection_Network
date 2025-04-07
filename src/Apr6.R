@@ -209,3 +209,47 @@ broom::tidy(nbfit2, exponentiate = TRUE) %>%
   select(Term, `Exp(Coef)`, Effect, `P-value`) %>%
   kable()
 #-----------------------------------------------------------
+# moran's I
+library(spdep)
+coords <- st_coordinates(d$nodes)
+# k neighbours to each intersections
+nb = knn2nb(knearneigh(coords, k=3))
+lw = nb2listw(nb, style="W")
+moran.test(d$df$acc, lw)
+# significant value means positive spatial autocorrelation >>
+# intersections near each other have more accident counts more than by random chance
+localmoran(d$df$acc,lw) -> lm
+moran.plot(d$df$acc,lw)
+
+d$nodes %>% 
+  mutate(Moran_Cluster = attr(lm, "quadr")[,1]) %>%
+ggplot() +
+  geom_sf(data = montreal, color = "grey80", size = 0.3) +
+  geom_sf(
+          aes(color = Moran_Cluster), 
+          size = 1) +
+  scale_color_manual(values = c("grey", "red", "blue", "orange", "green")) +
+  labs(color = "Moran Category",
+       title = "Local Moran Cluster with 3 Neighbours") +
+  theme_minimal()
+
+#---------------------------------------------
+# plot number of accidents per 10k pedestrians
+# not sure what to make out of this!
+# maybe ignor those with low accident count
+
+summary(d$df$acc)
+  d$df %>% 
+  mutate(acc_per_100k = ceiling(d$df$acc / (d$df$pi+1e-17) * 1000)) %>%
+  filter(acc_per_100k != 0) %>%
+  filter(acc_per_100k > median(acc_per_100k)) %>% 
+  arrange(desc(acc_per_100k))
+  ggplot() +
+  geom_sf(data = montreal, color = "grey80", size = 0.3) +
+  geom_sf(
+    aes(color = acc_per_100k), 
+    size = 1) +
+  scale_color_viridis_c() +
+  labs(color = "add desc",
+       title = "add title") +
+  theme_minimal()
