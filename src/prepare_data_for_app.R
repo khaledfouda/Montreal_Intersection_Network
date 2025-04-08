@@ -20,6 +20,9 @@ st_sf(
   mutate(node.id = row_number()) ->
   nodes
 
+nodes %<>%
+  st_join(select(montreal,geometry,ARR_GCH)) %>% 
+  distinct(node.id,.keep_all=TRUE)
 
 
 # switch back for 4326 because that's what leaflet expects

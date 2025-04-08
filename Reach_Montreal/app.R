@@ -16,7 +16,7 @@ library(matrixStats)
 dist_matrix <- readRDS( "../data/Montreal_distances_weighted.rds")
 montreal <- readRDS("../data/Montreal_processed_app.rds")
 nodes <- readRDS("../data/nodes_montreal_app.rds") %>%
-  rename(id = node.id)
+  rename(id = node.id) 
 
 
 #source("../Reach_Montreal/prepare_data_for_app.R")
@@ -106,7 +106,7 @@ server <- function(input, output, session){
       reach_count <- max_dist <- rep(0L, nrow(nodes))
     } else {
     dist_submat <- dist_matrix[L,,drop=FALSE] # rows of selected
-    max_dist <- colMaxs(dist_submat)
+    max_dist <- colMaxs(dist_submat) /100
     reachable <- dist_submat <= r
     reach_count <- colSums(reachable, na.rm=T)
     reach_count <- as.integer(reach_count)
@@ -140,6 +140,7 @@ server <- function(input, output, session){
   # observe to update when user interacts
   observe({
     req(input$map_bounds)
+    req(montreal)
     # req(reach_values())
     reach <- reach_values()
     max_dist <- reach[[2]]
@@ -161,16 +162,17 @@ server <- function(input, output, session){
                        radius = 5,
                        fillColor = ~pal(reach), fillOpacity = ~ifelse(reach==0, 0.0, 0.2),
                        stroke = FALSE,
-                       label = ~paste0("Node ", id, ": reach = ", reach),  # tooltip showing reach value
+                       label = ~paste0("max dist = ", max_dist,
+                                       "km: reach = ", reach,
+                                       ": arrond = ", ARR_GCH),
                        group = "Nodes") %>%
       addCircleMarkers(data = nodes[selectedNodes(),], # show elements in L in black
                        layerId = ~id,
                        radius = 5,
+                       label = ~paste0("Node ", id, ": arrond = ", ARR_GCH),
                        fillColor = "black", fillOpacity = 1,
                        stroke = FALSE,
-                       label = ~paste0("max dist = ", max_dist,
-                                       ": reach = ", reach,
-                                       ": arrond = ", montreal$ARR_DRT),  
+                       
                        group = "Nodes") %>%
       clearControls() %>%  # remove old legend
       addLegend(pal = pal, values = reach, title = "Reach (POIs within radius)",
@@ -178,25 +180,6 @@ server <- function(input, output, session){
     
     
     
-    
-    # 
-    # # nodes not highlighted
-    # normalNodes <- nodes[ !(nodes$node.id %in% selectedNodes()), ]
-    # # nodes highlighted
-    # selectedNodes <- nodes[ nodes$node.id %in% selectedNodes(), ]
-    # 
-    # # we now update the map
-    # leafletProxy("map") %>%
-    #   clearMarkers() %>%
-    #   # add unselected nodes
-    #   addCircleMarkers(data=normalNodes, layerId = ~node.id,
-    #                    radius = 6, stroke=FALSE,
-    #                    fillColor = ~pal(reach), fillOpacity = 0.8) %>%
-    #   # add selected nodes
-    #   addCircleMarkers(data = selectedNodes, layerId = ~node.id,
-    #                    radius = 6, color = "black", weight=2,
-    #                    fillColor = ~pal(reach), fillOpacity = 1) #%>%
-      # add legend later
     
   })
   
