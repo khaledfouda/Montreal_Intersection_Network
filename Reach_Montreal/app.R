@@ -10,6 +10,7 @@ library(shiny)
 library(leaflet)
 library(sf)
 library(dplyr)
+library(matrixStats)
 
 # read data : montreal, nodes, and distances
 dist_matrix <- readRDS( "../data/Montreal_distances_weighted.rds")
@@ -102,15 +103,16 @@ server <- function(input, output, session){
     req(dist_matrix)
     # compute the reach centrality
     if(length(L) == 0){
-      reach_count <- rep(0L, nrow(nodes))
+      reach_count <- max_dist <- rep(0L, nrow(nodes))
     } else {
     dist_submat <- dist_matrix[L,,drop=FALSE] # rows of selected
+    max_dist <- colMaxs(dist_submat)
     reachable <- dist_submat <= r
     reach_count <- colSums(reachable, na.rm=T)
     reach_count <- as.integer(reach_count)
     # later, we will add weight which will sum W[j] instead of counting.
     }
-    reach_count
+    list(reach_count, max_dist)
   })
 
   output$map <- renderLeaflet({
@@ -140,6 +142,8 @@ server <- function(input, output, session){
     req(input$map_bounds)
     # req(reach_values())
     reach <- reach_values()
+    max_dist <- reach[[2]]
+    reach <- reach[[1]]
     rng <- range(reach, na.rm=T)
     if(diff(rng) == 0){ # if all values are identical - no points selected
       rng <- c(rng[1], rng[1]+1) # so that it works
@@ -164,7 +168,9 @@ server <- function(input, output, session){
                        radius = 5,
                        fillColor = "black", fillOpacity = 1,
                        stroke = FALSE,
-                       label = ~paste0("Node ", id, ": reach = ", reach),  # tooltip showing reach value
+                       label = ~paste0("max dist = ", max_dist,
+                                       ": reach = ", reach,
+                                       ": arrond = ", montreal$ARR_DRT),  
                        group = "Nodes") %>%
       clearControls() %>%  # remove old legend
       addLegend(pal = pal, values = reach, title = "Reach (POIs within radius)",
