@@ -75,19 +75,7 @@ server <- function(input, output, session){
       # else, add it to the list
       current <- c(current, node_id)
     }
-    # update the minimum r >>
-    new_min_radius <- max(dist_matrix[current, current]) / 100
-    new_max_radius <- new_min_radius + 5
-    print(new_min_radius)
-    # Update the radius slider's minimum limit 
-    updateSliderInput(session, "radius", min = new_min_radius,
-                      max = new_max_radius)
     
-    # if current radius is below the new minimum, raise it to new minimum
-    if (input$radius > new_max_radius || input$radius < new_min_radius) {
-      updateSliderInput(session, "radius", value = new_min_radius)
-    }
-    #--- done
     selectedNodes(current)
   })
   
@@ -111,6 +99,23 @@ server <- function(input, output, session){
     reach_count <- colSums(reachable, na.rm=T)
     reach_count <- as.integer(reach_count)
     # later, we will add weight which will sum W[j] instead of counting.
+    # update the minimum r >>
+    new_min_radius <- min(max_dist)
+    new_max_radius <- new_min_radius + 5
+    print(new_min_radius)
+    # Update the radius slider's minimum limit 
+    updateSliderInput(session, "radius", min = new_min_radius,
+                      max = new_max_radius)
+    
+    # if current radius is below the new minimum, raise it to new minimum
+    if (input$radius > new_max_radius || input$radius < new_min_radius) {
+    updateSliderInput(session, "radius", value = new_min_radius + 1)
+    
+    }
+    #--- done
+   
+    
+    
     }
     list(reach_count, max_dist)
   })
@@ -140,7 +145,7 @@ server <- function(input, output, session){
   # observe to update when user interacts
   observe({
     req(input$map_bounds)
-    req(montreal)
+    
     # req(reach_values())
     reach <- reach_values()
     max_dist <- reach[[2]]

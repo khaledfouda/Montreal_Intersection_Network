@@ -15,7 +15,8 @@ d$dfs <- d$df %>%
 skim(d$dfs)
 
 # corr central
-cor_m <- cor(d$nodes %>% as.data.frame() %>% select(-geometry, -node.id,  contains("unweighted")))
+cor_m <- cor(d$nodes %>% as.data.frame() %>% select(-geometry, -node.id,  contains("unweighted")),
+             method = "spearman")
 cor_m[abs(cor_m)<.3] = NA
 ggcorrplot::ggcorrplot(cor_m,lab = T,type = "upper", insig="blank",
                        title = "Correlation Coefficients (>.3) between Centrality Measures",
