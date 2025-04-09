@@ -21,3 +21,6 @@
 go.work
 *.json
 
+Montreal_distances_weighted.rds
+data/Montreal_processed_app.rds
+data/nodes_montreal_app.rds

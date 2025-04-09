@@ -87,7 +87,7 @@ g <- graph_from_data_frame(
     st_set_geometry(NULL)  # If you want node attributes
 )
 # weight is the length
-E(g)$weight <- edges$segment_length
+#E(g)$weight <- edges$segment_length
 # check the degree distribution 
 deg <- degree(g)
 print("Grand Graph degree distribution:")
@@ -163,8 +163,15 @@ table(deg, useNA = "ifany")
 #--------------------------------------------------
 # we create centrality measures on the large connected graph and then later
 # we take a subset of these measures to our small dataset.
-E(g)$weight <- as.numeric(edges$segment_length)
 nodes.sf$deg_unweighted <- degree(g)
+nodes.sf$betweenes_unweighted <- betweenness(g)
+nodes.sf$closeness_unweighted <- closeness(g)
+nodes.sf$eigcentrality_unweighted <- eigen_centrality(g)$vector
+nodes.sf$eccentricity_unweighted <- eccentricity(g)  
+nodes.sf$harmonic_unweighted <- harmonic_centrality(g)
+#-------------
+E(g)$weight <- as.numeric(edges$segment_length)
+#------------
 nodes.sf$deg_weighted <- strength(g)
 nodes.sf$betweenes <- betweenness(g)
 nodes.sf$closeness <- closeness(g)
@@ -204,6 +211,7 @@ data_to_keep <- list(edges=edges.final,
 saveRDS(data_to_keep, "../data/processed_data_1033.rds")
 write_csv(as.data.frame(nodes.s), "../data/nodes_1033.csv")
 write_csv(as.data.frame(dat.sf), "../data/data_1033.csv")
+write_csv(as.data.frame(edges.final), "../data/edges_1033.csv")
 saveRDS(montreal, "../data/montreal_processed.rds")
 #----------------------------------------------------
 # some visualizations

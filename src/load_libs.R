@@ -7,3 +7,4 @@ require(lwgeom) # to use the function st_startpoint
 require(skimr) # to skim dataframes (summary)
 library(parallel)
 library(Matrix)
+library(kableExtra)
