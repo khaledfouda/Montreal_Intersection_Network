@@ -38,8 +38,12 @@ ui <- fluidPage(
             conditionalPanel(
               "input.use_weights == true",
               h4("Selected Locations and Weights"),
-              DTOutput("weights_table")
+              DTOutput("weights_table"),
+              actionButton("update_weights", "Update Map with Weights")
             ),
+            
+            
+            
           #),  
           
           sliderInput("radius",
@@ -54,7 +58,7 @@ ui <- fluidPage(
 
         # Show a plot of the generated distribution
         mainPanel(
-          leafletOutput("map", height="600px")
+          leafletOutput("map", height="90vh")
         )
     )
     
@@ -151,8 +155,8 @@ server <- function(input, output, session){
   output$weights_table <- DT::renderDT({
     selectedNodes_df()
   }, rownames = FALSE, editable = list(target = "cell",
-                                       columns = 3
-                                       #disable = list(columns = c(1,2))
+                                       columns = 3,
+                                       disable = list(columns = c(0,1))
                                        ),
   options = list(dom = 't', paging = FALSE))
   
@@ -163,8 +167,9 @@ server <- function(input, output, session){
     df <- selectedNodes_df()
     i <- info$row
     j <- info$col
-    
-    if(j == 1){ # allow only edit third column
+    print("info:")
+    print(info)
+    if(j == 2){ # allow only edit third column
       val <- suppressWarnings(as.numeric(info$value))
       if (is.na(val) || val <= 0) {
         # If no value or invalid value entered, default to 1.0
@@ -174,6 +179,8 @@ server <- function(input, output, session){
       # Only update if editing the Weight column (column index 3 in our table)
       #if (j == 3) {
       selectedNodes$weight[i] <- val
+      print(df)
+      print(selectedNodes)
       selectedNodes_df(df)
     }
   })
@@ -184,7 +191,9 @@ server <- function(input, output, session){
     # the following will compute the reach centrality for all nodes
     # test:
     #r = 1; L = sample(nodes$id, 5)
+    req(selectedNodes_df())
     df <- selectedNodes_df()
+    #print(df)
     r <- input$radius
     L <- df$id#as.numeric(selectedNodes$id)
     # convert radius from kilometers into  kilometers * 100
@@ -202,9 +211,11 @@ server <- function(input, output, session){
     
     
     dist_submat <- dist_matrix[L,,drop=FALSE] # rows of selected
-    reachable <- w * (dist_submat <= r)
+    penalty = exp(- .001*  dist_submat)
+    print(penalty[,1:5])
+    reachable <- w * (dist_submat <= r) * penalty
     reach_count <- colSums(reachable, na.rm=T)
-    reach_count <- as.integer(reach_count)
+    reach_count <- as.numeric(round(reach_count,2))
     # later, we will add weight which will sum W[j] instead of counting.
     #print(reach_count)
     # update the minimum r >>
@@ -237,12 +248,12 @@ server <- function(input, output, session){
     leaflet(options = leafletOptions(preferCanvas = TRUE)) %>%  # use canvas for performance with many points
       addTiles() %>%
       # Add road network lines for context (Montreal roads in gray)
-      addPolylines(data = montreal, color = "#888888", weight = 1, opacity = 0.6, group = "Roads") %>%
+      addPolylines(data = montreal, color = "#888888", weight = 1, opacity = 0.6, group = "Roads")%>% 
       # Add all intersection nodes as circle markers (initially all unselected, treat reach=0)
       addCircleMarkers(data = nodes,
                        layerId = ~id,  # use unique node id for referencing on click
                        radius = 5,
-                       fillColor = ~init_pal(0), fillOpacity = 0.8,
+                       fillColor = ~init_pal(0), fillOpacity = 0.01,
                        stroke = FALSE,  # no border
                        group = "Nodes") %>%
       # Add an initial legend (0 as min, 1 as max for placeholder)
@@ -252,10 +263,10 @@ server <- function(input, output, session){
   })
     
   # observe to update when user interacts
-  observe({
+  observeEvent(reach_values(), {
     req(input$map_bounds)
     
-    # req(reach_values())
+    req(reach_values())
     reach <- reach_values()
     max_dist <- reach[[2]]
     reach <- reach[[1]]
@@ -264,6 +275,7 @@ server <- function(input, output, session){
       rng <- c(rng[1], rng[1]+1) # so that it works
     }
     # color palette
+    #pal <- colorNumeric(c("red", "yellow", "green"), rng)
     pal <- colorNumeric(c("green", "yellow", "red"), rng)
     # Use leaflet proxy to update the existing map, instead of re-drawing it completely.
     # Update circle marker colors based on new reach values.
