@@ -25,43 +25,43 @@ nodes <- readRDS("../data/nodes_cluster_montreal_app.rds") %>%
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
-
-    # Application title
-    titlePanel("Reach Montreal"),
-
-    # Sidebar with a slider input for number of bins 
-    sidebarLayout(
-        sidebarPanel(
-          #sidebarPanel(
-            checkboxInput("use_weights", "With Weights?", FALSE),
-            
-            conditionalPanel(
-              "input.use_weights == true",
-              h4("Selected Locations and Weights"),
-              DTOutput("weights_table"),
-              actionButton("update_weights", "Update Map with Weights")
-            ),
-            
-            
-            
-          #),  
-          
-          sliderInput("radius",
-                        "Maximum Tolerable Distance (Kilometers):",
-                        min = 0,
-                        max = 5,
-                        value = 2.5,
-                        step = 0.5),
-            helpText("Select intersections on the map ....."),
-            actionButton("reset", "Reset Selection") # sets L to be empty
-        ),
-
-        # Show a plot of the generated distribution
-        mainPanel(
-          leafletOutput("map", height="90vh")
-        )
-    )
+  
+  # Application title
+  titlePanel("Reach Montreal"),
+  
+  # Sidebar with a slider input for number of bins 
+  sidebarLayout(
+    sidebarPanel(
+      #sidebarPanel(
+      checkboxInput("use_weights", "With Weights?", FALSE),
+      
+      conditionalPanel(
+        "input.use_weights == true",
+        h4("Selected Locations and Weights"),
+        DTOutput("weights_table"),
+        actionButton("update_weights", "Update Map with Weights")
+      ),
+      
+      
+      
+      #),  
+      
+      sliderInput("radius",
+                  "Maximum Tolerable Distance (Kilometers):",
+                  min = 0,
+                  max = 5,
+                  value = 2.5,
+                  step = 0.5),
+      helpText("Select intersections on the map ....."),
+      actionButton("reset", "Reset Selection") # sets L to be empty
+    ),
     
+    # Show a plot of the generated distribution
+    mainPanel(
+      leafletOutput("map", height="90vh")
+    )
+  )
+  
 )
 
 
@@ -70,7 +70,7 @@ server <- function(input, output, session){
   # store L
   selectedNodes <- reactiveValues(id = numeric(0),
                                   weight = numeric(0))
-
+  
   
   
   # observe for reset button
@@ -149,7 +149,7 @@ server <- function(input, output, session){
     # }
   })
   
- 
+  
   
   # render the data table fothe weights
   output$weights_table <- DT::renderDT({
@@ -157,7 +157,7 @@ server <- function(input, output, session){
   }, rownames = FALSE, editable = list(target = "cell",
                                        columns = 3,
                                        disable = list(columns = c(0,1))
-                                       ),
+  ),
   options = list(dom = 't', paging = FALSE))
   
   # Handle edits in the weights table: update the weight in reactive values
@@ -207,39 +207,39 @@ server <- function(input, output, session){
         w <- df$weight#as.numeric(selectedNodes$weight)
       }else
         w <- rep(1.0, length(L))
-    w[is.na(w)|!is.numeric(w)] <- 1.0 # for missing values
-    
-    
-    dist_submat <- dist_matrix[L,,drop=FALSE] # rows of selected
-    penalty = exp(- .001*  dist_submat)
-    print(penalty[,1:5])
-    reachable <- w * (dist_submat <= r) * penalty
-    reach_count <- colSums(reachable, na.rm=T)
-    reach_count <- as.numeric(round(reach_count,2))
-    # later, we will add weight which will sum W[j] instead of counting.
-    #print(reach_count)
-    # update the minimum r >>
-    max_dist <- colMaxs(dist_submat) /100
-    new_min_radius <- min(max_dist)
-    new_max_radius <- new_min_radius + 5
-    print(new_min_radius)
-    # Update the radius slider's minimum limit 
-    updateSliderInput(session, "radius", min = new_min_radius,
-                      max = new_max_radius)
-    
-    # if current radius is below the new minimum, raise it to new minimum
-    if (input$radius > new_max_radius || input$radius < new_min_radius) {
-    updateSliderInput(session, "radius", value = new_min_radius + 1)
-    
-    }
-    #--- done
-   
-    
-    
+      w[is.na(w)|!is.numeric(w)] <- 1.0 # for missing values
+      
+      
+      dist_submat <- dist_matrix[L,,drop=FALSE] # rows of selected
+      penalty = exp(- .00012*  dist_submat)
+      print(penalty[,1:5])
+      reachable <- w * (dist_submat <= r) * penalty
+      reach_count <- colSums(reachable, na.rm=T)
+      reach_count <- as.numeric(round(reach_count,2))
+      # later, we will add weight which will sum W[j] instead of counting.
+      #print(reach_count)
+      # update the minimum r >>
+      max_dist <- colMaxs(dist_submat) /100
+      new_min_radius <- min(max_dist)
+      new_max_radius <- new_min_radius + 5
+      print(new_min_radius)
+      # Update the radius slider's minimum limit 
+      updateSliderInput(session, "radius", min = new_min_radius,
+                        max = new_max_radius)
+      
+      # if current radius is below the new minimum, raise it to new minimum
+      if (input$radius > new_max_radius || input$radius < new_min_radius) {
+        updateSliderInput(session, "radius", value = new_min_radius + 1)
+        
+      }
+      #--- done
+      
+      
+      
     }
     list(reach_count, max_dist)
   })
-
+  
   output$map <- renderLeaflet({
     req(nodes) # we need nodes matrix to draw
     req(montreal)
@@ -261,7 +261,7 @@ server <- function(input, output, session){
                 position = "bottomright", opacity = 1)
     
   })
-    
+  
   # observe to update when user interacts
   observeEvent(reach_values(), {
     req(input$map_bounds)
@@ -281,8 +281,8 @@ server <- function(input, output, session){
     # Update circle marker colors based on new reach values.
     # We'll map each node's fill color using the updated palette and the reach values.
     fillOpacity = 
-    leafletProxy("map", data = nodes) %>%
-
+      leafletProxy("map", data = nodes) %>%
+      
       clearMarkers() %>%   # remove existing node markers
       addCircleMarkers(layerId = ~id,
                        radius = 5,
