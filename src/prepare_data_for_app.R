@@ -1,3 +1,4 @@
+setwd("~/OneDrive/coursework/Winter25/networks/project/Montreal_Intersection_Network/src")
 source("../src/load_libs.R")
 
 montreal <- st_read("../data/geobase_city_of_montreal.json") %>%
@@ -23,6 +24,7 @@ st_sf(
 nodes %<>%
   st_join(select(montreal,geometry,ARR_GCH)) %>% 
   distinct(node.id,.keep_all=TRUE)
+
 
 
 # switch back for 4326 because that's what leaflet expects
@@ -66,11 +68,57 @@ dist_matrix[1:10, 1:10]
 # for the following part we cluster the points to reduce the radius
 library(dbscan)
 
-# coords <-
+nodes %>%
+  #st_transform(crs=4326) %>%
+  st_coordinates() %>%
+  as.data.frame() %>%
+  rename(x=X, y=Y) ->
+  coords
+
+clusterfit <- dbscan(coords, eps=69.75, minPts=1)
+clusterfit$cluster %>% table() %>%
+  as.data.frame() %>%
+  arrange(desc(Freq)) %T>%
+  {print(head(.))} %>%
+  dim()
+#----------
+nodes$cluster = clusterfit$cluster
+nodes %>%
+  group_by(cluster) %>%
+  filter(row_number() == 1) %>%
+  ungroup() ->
+  nodes.clustered
+
+# for the distance matrix, i'll go with the average distance between pairs of clusters
+# actually, now, it's easier to just take distances between the current clusters
+# keep only the rows and columns of them.
+# make sure that you're sorted by node_id.
+M <- nrow(nodes.clustered)
+dist_clust = dist_matrix[nodes.clustered$node.id, nodes.clustered$node.id]
+
+# subset montreal
+match_start = st_equals(montreal$start_pt, nodes.clustered, sparse = T)
+match_end = st_equals(montreal$end_pt, nodes.clustered, sparse = T)
+matches =  (lengths(match_start)>0) | (lengths(match_end) > 0)
+montreal.cluster <- montreal[matches,]
 
 
+# we save everything now:
+st_transform(nodes.clustered, crs = 4326) %>%
+  saveRDS( "../data/nodes_cluster_montreal_app.rds")
+st_transform(montreal.cluster, crs = 4326) %>%
+  saveRDS("../data/Montreal_processed_cluster_app.rds")
 
+saveRDS(dist_clust, "../data/Montreal_distances_cluster.rds")
+#-------------------------------------------------------------------
 
+ggplot() +
+  geom_sf(data = montreal.cluster, color = "grey90", size = 0.3) +
+  #geom_sf(data = select(edges.to.print2,geometry), color = "green", alpha=0.2, size = 1.2) +
+  geom_sf(data = nodes.clustered, color = "red", size = .3) +
+  #geom_sf(data = select(edges.to.print,geometry), color = "blue", size = 1.2) +
+  theme_minimal() +
+  theme_void()
 
 
 

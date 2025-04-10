@@ -11,12 +11,14 @@ library(leaflet)
 library(sf)
 library(dplyr)
 library(matrixStats)
+library(DT) # for table
 
 # read data : montreal, nodes, and distances
-dist_matrix <- readRDS( "../data/Montreal_distances_weighted.rds")
+dist_matrix <- readRDS( "../data/Montreal_distances_cluster.rds")
 montreal <- readRDS("../data/Montreal_processed_app.rds")
-nodes <- readRDS("../data/nodes_montreal_app.rds") %>%
-  rename(id = node.id) 
+nodes <- readRDS("../data/nodes_cluster_montreal_app.rds") %>%
+  rename(id = node.id) %>%
+  mutate(id = 1:nrow(.))
 
 
 #source("../Reach_Montreal/prepare_data_for_app.R")
@@ -30,7 +32,17 @@ ui <- fluidPage(
     # Sidebar with a slider input for number of bins 
     sidebarLayout(
         sidebarPanel(
-            sliderInput("radius",
+          #sidebarPanel(
+            checkboxInput("use_weights", "With Weights?", FALSE),
+            
+            conditionalPanel(
+              "input.use_weights == true",
+              h4("Selected Locations and Weights"),
+              DTOutput("weights_table")
+            ),
+          #),  
+          
+          sliderInput("radius",
                         "Maximum Tolerable Distance (Kilometers):",
                         min = 0,
                         max = 5,
@@ -52,7 +64,8 @@ ui <- fluidPage(
 server <- function(input, output, session){
   
   # store L
-  selectedNodes <- reactiveVal(character(0))
+  selectedNodes <- reactiveValues(ids = character(0),
+                                  weights = character(0))
 
   
   
@@ -60,13 +73,16 @@ server <- function(input, output, session){
   observeEvent(input$reset, {
     selectedNodes(character(0)) # Reset selected nodes to empty
   })
+  
+  
   # observe map clicks to update
   observeEvent(input$map_marker_click, {
     click <- input$map_marker_click
     if(is.null(click$id)) return()
+    
     node_id <- as.numeric(click$id) # intersection id
     #req(node_id)
-    current <- selectedNodes()
+    current <- selectedNodes$ids
     
     if(node_id %in% current){
       # if selecting one that's already chosen, remove it
@@ -75,8 +91,8 @@ server <- function(input, output, session){
       # else, add it to the list
       current <- c(current, node_id)
     }
-    
-    selectedNodes(current)
+    print(current)
+    selectedNodes(as.numeric(current))
   })
   
   reach_values <- reactive({
@@ -165,7 +181,7 @@ server <- function(input, output, session){
       clearMarkers() %>%   # remove existing node markers
       addCircleMarkers(layerId = ~id,
                        radius = 5,
-                       fillColor = ~pal(reach), fillOpacity = ~ifelse(reach==0, 0.0, 0.2),
+                       fillColor = ~pal(reach), fillOpacity = ~ifelse(reach==0, 0.01, 0.2),
                        stroke = FALSE,
                        label = ~paste0("max dist = ", max_dist,
                                        "km: reach = ", reach,

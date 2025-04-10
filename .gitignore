@@ -24,3 +24,8 @@ go.work
 Montreal_distances_weighted.rds
 data/Montreal_processed_app.rds
 data/nodes_montreal_app.rds
+data/Montreal_distances_cluster.rds
+data/Montreal_processed_cluster_app.rds
+data/nodes_cluster_montreal_app.rds
+src/.RData
+src/.Rhistory
