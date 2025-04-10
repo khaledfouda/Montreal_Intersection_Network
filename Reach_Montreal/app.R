@@ -64,16 +64,34 @@ ui <- fluidPage(
 server <- function(input, output, session){
   
   # store L
-  selectedNodes <- reactiveValues(ids = character(0),
-                                  weights = character(0))
+  selectedNodes <- reactiveValues(id = numeric(0),
+                                  weight = numeric(0))
 
   
   
   # observe for reset button
   observeEvent(input$reset, {
-    selectedNodes(character(0)) # Reset selected nodes to empty
+    selectedNodes$id <- numeric(0)   
+    selectedNodes$weight <- numeric(0)
+    selectedNodes_df(data.frame(
+      order = integer(0),
+      id = numeric(0),
+      weight = numeric(0),
+      stringsAsFactors = FALSE
+    ))
   })
   
+  selectedNodes_df <- reactiveVal(
+    # print(seq_along(selectedNodes$ids))
+    # print(selectedNodes$id)
+    # print(selectedNodes$weight)
+    data.frame(
+      order = integer(0),#seq_along(as.numeric(selectedNodes$id)),
+      id = numeric(0),#as.numeric(selectedNodes$id),
+      weight = numeric(0),#as.numeric(selectedNodes$weight),
+      stringsAsFactors = FALSE
+    )
+  )
   
   # observe map clicks to update
   observeEvent(input$map_marker_click, {
@@ -81,27 +99,94 @@ server <- function(input, output, session){
     if(is.null(click$id)) return()
     
     node_id <- as.numeric(click$id) # intersection id
-    #req(node_id)
-    current <- selectedNodes$ids
+    #current <- selectedNodes$ids
     
-    if(node_id %in% current){
+    df <- selectedNodes_df() # with the table values
+    
+    if(node_id %in% selectedNodes$id){
       # if selecting one that's already chosen, remove it
-      current <- setdiff(current, node_id)
+      #current <- setdiff(current, node_id)
+      idx <- which(selectedNodes$id == node_id)
+      selectedNodes$id <- selectedNodes$id[-idx]
+      selectedNodes$weight <- selectedNodes$weight[-idx]
+      df <- df[df$id != node_id]
+      df$order <- seq_len(nrow(df))
+      
     }else {
       # else, add it to the list
-      current <- c(current, node_id)
+      #current <- c(current, node_id)
+      selectedNodes$id <- c(selectedNodes$id, node_id)
+      selectedNodes$weight <- c(selectedNodes$weight, 1.0)
+      new_row <- data.frame(order = length(selectedNodes$id),
+                            id = node_id, weight = 1, stringsAsFactors = F)
+      print(new_row)
+      print(df)
+      df <- rbind(df, new_row)
     }
-    print(current)
-    selectedNodes(as.numeric(current))
+    selectedNodes_df(df)
+    print(selectedNodes$ids)
+    # selectedNodes(as.numeric(current))
+    
+    # update map for the seected nodes [label]
+    # leafletProxy("map") %>% clearGroup("labels")
+    # # add a label next to each selected node
+    # if (length(selectedNodes$ids) > 0) {
+    #   # Get data for selected nodes in the order they were selected
+    #   sel_order <- seq_along(selectedNodes$id)
+    #   sel_data <- nodes[nodes$id %in% selectedNodes$id, ]
+    #   # Match the order of sel_data to the order of selectedNodes$ids
+    #   sel_data <- sel_data[match(selectedNodes$id, sel_data$id), ]
+    #   leafletProxy("map") %>% addLabelOnlyMarkers(
+    #     lng = sel_data$lon, lat = sel_data$lat,
+    #     label = sel_order %>% as.character(),  # label text as character numbers
+    #     group = "labels",
+    #     labelOptions = labelOptions(noHide = TRUE, direction = "top", textOnly = TRUE)
+    #   )
+    # }
   })
+  
+ 
+  
+  # render the data table fothe weights
+  output$weights_table <- DT::renderDT({
+    selectedNodes_df()
+  }, rownames = FALSE, editable = list(target = "cell",
+                                       columns = 3
+                                       #disable = list(columns = c(1,2))
+                                       ),
+  options = list(dom = 't', paging = FALSE))
+  
+  # Handle edits in the weights table: update the weight in reactive values
+  observeEvent(input$weights_table_cell_edit, {
+    info <- input$weights_table_cell_edit
+    if (is.null(info)) return()
+    df <- selectedNodes_df()
+    i <- info$row
+    j <- info$col
+    
+    if(j == 1){ # allow only edit third column
+      val <- suppressWarnings(as.numeric(info$value))
+      if (is.na(val) || val <= 0) {
+        # If no value or invalid value entered, default to 1.0
+        val <- 1.0
+      }
+      df$weight[i] <- val
+      # Only update if editing the Weight column (column index 3 in our table)
+      #if (j == 3) {
+      selectedNodes$weight[i] <- val
+      selectedNodes_df(df)
+    }
+  })
+  
+  
   
   reach_values <- reactive({
     # the following will compute the reach centrality for all nodes
     # test:
     #r = 1; L = sample(nodes$id, 5)
-    
+    df <- selectedNodes_df()
     r <- input$radius
-    L <- selectedNodes()
+    L <- df$id#as.numeric(selectedNodes$id)
     # convert radius from kilometers into  kilometers * 100
     r <- floor(as.numeric(r) * 100)
     req(dist_matrix)
@@ -109,13 +194,21 @@ server <- function(input, output, session){
     if(length(L) == 0){
       reach_count <- max_dist <- rep(0L, nrow(nodes))
     } else {
+      if(input$use_weights){
+        w <- df$weight#as.numeric(selectedNodes$weight)
+      }else
+        w <- rep(1.0, length(L))
+    w[is.na(w)|!is.numeric(w)] <- 1.0 # for missing values
+    
+    
     dist_submat <- dist_matrix[L,,drop=FALSE] # rows of selected
-    max_dist <- colMaxs(dist_submat) /100
-    reachable <- dist_submat <= r
+    reachable <- w * (dist_submat <= r)
     reach_count <- colSums(reachable, na.rm=T)
     reach_count <- as.integer(reach_count)
     # later, we will add weight which will sum W[j] instead of counting.
+    #print(reach_count)
     # update the minimum r >>
+    max_dist <- colMaxs(dist_submat) /100
     new_min_radius <- min(max_dist)
     new_max_radius <- new_min_radius + 5
     print(new_min_radius)
@@ -187,7 +280,7 @@ server <- function(input, output, session){
                                        "km: reach = ", reach,
                                        ": arrond = ", ARR_GCH),
                        group = "Nodes") %>%
-      addCircleMarkers(data = nodes[selectedNodes(),], # show elements in L in black
+      addCircleMarkers(data = nodes[selectedNodes$id,], # show elements in L in black
                        layerId = ~id,
                        radius = 5,
                        label = ~paste0("Node ", id, ": arrond = ", ARR_GCH),
